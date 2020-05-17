@@ -1,0 +1,81 @@
+---
+title: "Datos según provincia"
+output: flexdashboard::flex_dashboard
+runtime: shiny
+
+---
+
+```{r global, include=FALSE}
+# Carga la data 
+library(dplyr)
+ 
+library(tidyr)
+library(ggplot2)
+library(shiny)
+library(sf)
+library(readxl)
+library(stringr)
+library(av)
+library(readxl)
+library(forcats)
+library(viridis)
+library(tidyr)
+library(tmap)
+ 
+
+mapa<-sf::read_sf("C:/Users/eduar/Google Drive (1)/Cursos/R Commander/Base de Datos/ShapeFilesCenso2010/PROVCenso2010.shp")
+mapa <- st_transform(mapa, crs = "+proj=longlat +datum=WGS84")
+data_mapa<- read_excel("D:/drive/OneDrive/Escritorio/Sentiment/Provincia_Region1.xlsx")
+
+ 
+
+data_mapa <- data_mapa %>% 
+     mutate(Cantidad1 = ifelse(is.na(Cantidad),0,Cantidad),
+            Cantidad1.1= format(round(Cantidad1,0), big.mark=",", scientific=FALSE),
+            label = paste(Provincia,  Cantidad1.1, sep="\n") )
+ 
+
+mapa1 <- mapa %>% 
+  mutate(
+    Provincia = str_to_title(TOPONIMIA),
+    Provincia = recode(
+      Provincia, 
+      "San Pedro De Macorís" = "San Pedro de Macorís",
+    "San José De Ocoa" = "San José de Ocoa")
+ ) %>% 
+  dplyr::select(Provincia, everything(), -TOPONIMIA, -ENLACE)
+
+
+```
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+
+```{r}
+selectInput('Categoría', 'Categoría', choices = unique(data_mapa$Categoría))
+```
+
+Column
+-----------------------------------------------------------------------
+
+ 
+```{r}
+renderPlot({
+ 
+ 
+    mapa1 %>% 
+  left_join(data_mapa) %>% 
+  filter(Categoría == input$Categoría) %>% 
+  ggplot() +
+  geom_sf(aes(fill = Cantidad)) +
+ # scale_fill_viridis(colors = viridis(x)[3:8], labels = scales::comma)+
+  scale_fill_gradientn( colors = viridis(10)[2:10], labels = scales::comma)+
+  geom_sf_label(aes(label = label), size = 2.45  )+
+  theme_void() 
+    
+}, height = 700, width = 1200 )
+```
+
+
+
